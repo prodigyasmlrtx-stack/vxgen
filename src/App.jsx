@@ -89,10 +89,3 @@ function App() {
 }
 
 export default App;
-```
-
-Guarda con **Ctrl + S** luego en terminal:
-```
-git add .
-git commit -m "fix ref modelo"
-git push
