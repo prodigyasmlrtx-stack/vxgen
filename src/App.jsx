@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { pipeline } from "@xenova/transformers";
 
 function App() {
   const [hardware, setHardware] = useState(null);
-  const [modelo, setModelo] = useState(null);
+  const [modelo, setModelo] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [resultado, setResultado] = useState(null);
+  const modeloRef = useRef(null);
 
   useEffect(() => {
     const cores = navigator.hardwareConcurrency || 2;
@@ -29,7 +30,8 @@ function App() {
         "text2text-generation",
         "Xenova/LaMini-Flan-T5-77M"
       );
-      setModelo(pipe);
+      modeloRef.current = pipe;
+      setModelo(true);
     } catch (error) {
       console.error(error);
       alert("Error: " + error.message);
@@ -38,11 +40,11 @@ function App() {
   };
 
   const generar = async () => {
-    if (!modelo || !prompt) return;
+    if (!modeloRef.current || !prompt) return;
     setCargando(true);
     try {
-      const output = await modelo(prompt, { max_new_tokens: 50 });
-      setResultado(output[0].generated_text);
+      const output = await modeloRef.current(prompt, { max_new_tokens: 50 });
+      setResultado(output[0]?.generated_text || JSON.stringify(output));
     } catch (error) {
       setResultado("Error: " + error.message);
     }
@@ -87,3 +89,10 @@ function App() {
 }
 
 export default App;
+```
+
+Guarda con **Ctrl + S** luego en terminal:
+```
+git add .
+git commit -m "fix ref modelo"
+git push
