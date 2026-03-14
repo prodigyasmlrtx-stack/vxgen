@@ -6,7 +6,7 @@ function App() {
   const [modelo, setModelo] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [prompt, setPrompt] = useState("");
-  const [resultado, setResultado] = useState(null);
+  const [imagen, setImagen] = useState(null);
   const modeloRef = useRef(null);
 
   useEffect(() => {
@@ -27,8 +27,8 @@ function App() {
     setCargando(true);
     try {
       const pipe = await pipeline(
-        "text2text-generation",
-        "Xenova/LaMini-Flan-T5-77M"
+        "text-to-image",
+        "Xenova/stable-diffusion-v1-5"
       );
       modeloRef.current = pipe;
       setModelo(true);
@@ -42,11 +42,13 @@ function App() {
   const generar = async () => {
     if (!modeloRef.current || !prompt) return;
     setCargando(true);
+    setImagen(null);
     try {
-      const output = await modeloRef.current(prompt, { max_new_tokens: 50 });
-      setResultado(output[0]?.generated_text || JSON.stringify(output));
+      const output = await modeloRef.current(prompt);
+      const url = URL.createObjectURL(output);
+      setImagen(url);
     } catch (error) {
-      setResultado("Error: " + error.message);
+      alert("Error: " + error.message);
     }
     setCargando(false);
   };
@@ -69,19 +71,19 @@ function App() {
       </button>
       <br />
       <input value={prompt} onChange={e => setPrompt(e.target.value)}
-        placeholder="Describe tu video..."
+        placeholder="Describe tu imagen..."
         style={{ background: "#111", color: "white", border: "1px solid #333",
           padding: "10px", width: 400, fontFamily: "monospace" }} />
       <br /><br />
       <button onClick={generar} disabled={!modelo || cargando || !prompt}
         style={{ background: "#222", color: "white", border: "1px solid #444",
           padding: "10px 20px", cursor: "pointer", fontFamily: "monospace" }}>
-        {cargando ? "Generando..." : "Generar"}
+        {cargando ? "Generando..." : "Generar imagen"}
       </button>
-      {resultado && (
-        <div style={{ marginTop: 20, padding: 20,
-          background: "#111", border: "1px solid #333" }}>
-          <p>{resultado}</p>
+      {imagen && (
+        <div style={{ marginTop: 20 }}>
+          <img src={imagen} alt="generada"
+            style={{ maxWidth: 512, borderRadius: 8 }} />
         </div>
       )}
     </div>
