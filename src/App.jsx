@@ -1,13 +1,20 @@
-import { useState, useEffect, useRef } from "react";
-import { pipeline } from "@xenova/transformers";
+import { useState, useEffect } from "react";
+import { fal } from "@fal-ai/client";
+import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
+
+fal.config({
+  credentials: import.meta.env.VITE_FAL_KEY,
+});
+
+const TU_WALLET = "EtvgSGvoWcVV17eRwbHpW21FDpACLuSTH5Mm47CYpg6d";
 
 function App() {
   const [hardware, setHardware] = useState(null);
-  const [modelo, setModelo] = useState(false);
+  const [wallet, setWallet] = useState(null);
+  const [pagado, setPagado] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [prompt, setPrompt] = useState("");
-  const [imagen, setImagen] = useState(null);
-  const modeloRef = useRef(null);
+  const [video, setVideo] = useState(null);
 
   useEffect(() => {
     const cores = navigator.hardwareConcurrency || 2;
@@ -20,33 +27,58 @@ function App() {
     } else {
       tier = "basico"; resolucion = "480p"; duracion = 5;
     }
-    setHardware({ tier, resolucion, duracion, cores, memory });
+    setHardware({ tier, resolucion, duracion });
   }, []);
 
-  const cargarModelo = async () => {
-    setCargando(true);
+  const conectarWallet = async () => {
     try {
-      const pipe = await pipeline(
-        "text-to-image",
-        "Xenova/stable-diffusion-v1-5"
-      );
-      modeloRef.current = pipe;
-      setModelo(true);
+      const { solana } = window;
+      if (!solana?.isPhantom) {
+        alert("Instala Phantom Wallet primero desde phantom.app");
+        return;
+      }
+      const response = await solana.connect();
+      setWallet(response.publicKey.toString());
     } catch (error) {
-      console.error(error);
-      alert("Error: " + error.message);
+      alert("Error conectando wallet: " + error.message);
     }
-    setCargando(false);
+  };
+
+  const pagar = async () => {
+    try {
+      const { solana } = window;
+      const connection = new Connection("https://api.mainnet-beta.solana.com");
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: new PublicKey(wallet),
+          toPubkey: new PublicKey(TU_WALLET),
+          lamports: LAMPORTS_PER_SOL * 0.01,
+        })
+      );
+      const { blockhash } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = new PublicKey(wallet);
+      const signed = await solana.signAndSendTransaction(transaction);
+      console.log("TX:", signed.signature);
+      setPagado(true);
+    } catch (error) {
+      alert("Error en pago: " + error.message);
+    }
   };
 
   const generar = async () => {
-    if (!modeloRef.current || !prompt) return;
+    if (!prompt) return;
     setCargando(true);
-    setImagen(null);
+    setVideo(null);
     try {
-      const output = await modeloRef.current(prompt);
-      const url = URL.createObjectURL(output);
-      setImagen(url);
+      const result = await fal.subscribe("fal-ai/kling-video/v1.6/standard/text-to-video", {
+        input: {
+          prompt: prompt,
+          duration: hardware?.duracion >= 10 ? "10" : "5",
+          aspect_ratio: "9:16",
+        },
+      });
+      setVideo(result.data.video.url);
     } catch (error) {
       alert("Error: " + error.message);
     }
@@ -63,27 +95,45 @@ function App() {
         </p>
       )}
       <br />
-      <button onClick={cargarModelo} disabled={cargando || modelo}
-        style={{ background: "#222", color: "white", border: "1px solid #444",
-          padding: "10px 20px", cursor: "pointer", fontFamily: "monospace",
-          marginBottom: 20 }}>
-        {modelo ? "✅ Modelo listo" : cargando ? "Cargando modelo..." : "Cargar modelo IA"}
-      </button>
-      <br />
-      <input value={prompt} onChange={e => setPrompt(e.target.value)}
-        placeholder="Describe tu imagen..."
-        style={{ background: "#111", color: "white", border: "1px solid #333",
-          padding: "10px", width: 400, fontFamily: "monospace" }} />
-      <br /><br />
-      <button onClick={generar} disabled={!modelo || cargando || !prompt}
-        style={{ background: "#222", color: "white", border: "1px solid #444",
-          padding: "10px 20px", cursor: "pointer", fontFamily: "monospace" }}>
-        {cargando ? "Generando..." : "Generar imagen"}
-      </button>
-      {imagen && (
-        <div style={{ marginTop: 20 }}>
-          <img src={imagen} alt="generada"
-            style={{ maxWidth: 512, borderRadius: 8 }} />
+      {!wallet ? (
+        <button onClick={conectarWallet}
+          style={{ background: "#222", color: "white", border: "1px solid #444",
+            padding: "10px 20px", cursor: "pointer", fontFamily: "monospace" }}>
+          Conectar Phantom Wallet
+        </button>
+      ) : !pagado ? (
+        <div>
+          <p style={{ color: "#888" }}>
+            Wallet: {wallet.slice(0,8)}...{wallet.slice(-4)}
+          </p>
+          <p style={{ color: "#666", fontSize: 13 }}>
+            Acceso completo por $1.50 cada 3 días
+          </p>
+          <button onClick={pagar}
+            style={{ background: "#222", color: "white", border: "1px solid #444",
+              padding: "10px 20px", cursor: "pointer", fontFamily: "monospace" }}>
+            Pagar y generar videos
+          </button>
+        </div>
+      ) : (
+        <div>
+          <p style={{ color: "#00ff95" }}>✅ Acceso activo</p>
+          <input value={prompt} onChange={e => setPrompt(e.target.value)}
+            placeholder="Describe tu video..."
+            style={{ background: "#111", color: "white", border: "1px solid #333",
+              padding: "10px", width: 400, fontFamily: "monospace" }} />
+          <br /><br />
+          <button onClick={generar} disabled={cargando || !prompt}
+            style={{ background: "#222", color: "white", border: "1px solid #444",
+              padding: "10px 20px", cursor: "pointer", fontFamily: "monospace" }}>
+            {cargando ? "Generando video..." : "Generar video"}
+          </button>
+          {video && (
+            <div style={{ marginTop: 20 }}>
+              <video src={video} controls autoPlay
+                style={{ maxWidth: 400, borderRadius: 8 }} />
+            </div>
+          )}
         </div>
       )}
     </div>
