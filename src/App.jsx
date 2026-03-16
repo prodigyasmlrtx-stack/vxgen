@@ -7,6 +7,7 @@ fal.config({
 });
 
 const TU_WALLET = "EtvgSGvoWcVV17eRwbHpW21FDpACLuSTH5Mm47CYpg6d";
+const RPC = "https://solana-mainnet.g.alchemy.com/v2/demo";
 
 function App() {
   const [hardware, setHardware] = useState(null);
@@ -47,7 +48,7 @@ function App() {
   const pagar = async () => {
     try {
       const { solana } = window;
-      const connection = new Connection("https://api.mainnet-beta.solana.com");
+      const connection = new Connection(RPC);
       const transaction = new Transaction().add(
         SystemProgram.transfer({
           fromPubkey: new PublicKey(wallet),
