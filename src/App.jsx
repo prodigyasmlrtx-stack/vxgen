@@ -7,7 +7,7 @@ fal.config({
 });
 
 const TU_WALLET = "EtvgSGvoWcVV17eRwbHpW21FDpACLuSTH5Mm47CYpg6d";
-const RPC = "https://solana-mainnet.g.alchemy.com/v2/demo";
+const RPC = "https://mainnet.helius-rpc.com/?api-key=b65edef5-4e26-4807-a8e7-65ebb6cc184a";
 
 function App() {
   const [hardware, setHardware] = useState(null);
