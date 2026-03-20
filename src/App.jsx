@@ -1,15 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { fal } from "@fal-ai/client";
 import { ConnectionProvider, WalletProvider, useWallet } from "@solana/wallet-adapter-react";
 import { WalletModalProvider, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import "@solana/wallet-adapter-react-ui/styles.css";
-
-fal.config({ credentials: import.meta.env.VITE_FAL_KEY });
 
 const TU_WALLET = "EtvgSGvoWcVV17eRwbHpW21FDpACLuSTH5Mm47CYpg6d";
 const RPC = "https://mainnet.helius-rpc.com/?api-key=b65edef5-4e26-4807-a8e7-65ebb6cc184a";
+const COLAB_URL = "https://overattentive-susanne-marbly.ngrok-free.dev";
 
 function VideoApp() {
   const { publicKey, sendTransaction, connected } = useWallet();
@@ -56,14 +53,17 @@ function VideoApp() {
     setCargando(true);
     setVideo(null);
     try {
-      const result = await fal.subscribe("fal-ai/kling-video/v1.6/standard/text-to-video", {
-        input: {
-          prompt: prompt,
-          duration: hardware?.duracion >= 10 ? "10" : "5",
-          aspect_ratio: "9:16",
+      const response = await fetch(`${COLAB_URL}/generar`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true"
         },
+        body: JSON.stringify({ prompt }),
       });
-      setVideo(result.data.video.url);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setVideo(url);
     } catch (error) {
       alert("Error: " + error.message);
     }
